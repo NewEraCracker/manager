@@ -4,10 +4,11 @@ Extension Manager for PHP
 What is Extension Manager?
 --------------------------
 Extension Manager is a free open source extension manager for PHP. It increases
-compatibility in environments requiring the load of third-party zend extensions.
+compatibility in environments that require loading of zend extensions made by
+third-parties.
 
 Extension Manager stores extensions loaded into its own structures, defeating
-most common checks performed by 3rd party closed source zend extensions.
+most common checks performed by third-party closed source zend extensions.
 
 It will hook into the first loaded zend extension and execute other extension
 methods from there if stealth mode is enabled.
