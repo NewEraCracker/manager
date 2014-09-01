@@ -5,7 +5,7 @@ Requirements
 ------------
 * Extension Manager sources
 * You need Visual Studio or compatible compiler (Windows Libraries)
-* You need to download the full source code of php 5 and the archive with the precompiled php 5 binary (or build php 5 you're self from source)
+* You need to download the full source code of php 5 and the archive with the precompiled php 5 binary (or build php 5 yourself from source)
   Download the PHP sources and binaries for the version of PHP you wish to use Extension Manager with.  The downloads can be obtained from http://www.php.net/downloads.php.  The sources are compressed in two formats .tar.gz and .tar.bz2.  If you use WinZip, download the .tar.gz format.  Winrar is capable of extracting .tar.bz2 formats.
 
 Note: The reason why you need the binary package is because it is not necessary to compile PHP sources; you only need the .lib file that is included in the binary distribution and PHP sources.
