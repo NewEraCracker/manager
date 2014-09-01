@@ -6,7 +6,7 @@ Requirements
 * Extension Manager sources
 * You need Visual Studio or compatible compiler (Windows Libraries)
 * You need to download the full source code of PHP 5 and the archive with the precompiled PHP 5 binary (or build PHP 5 yourself from source)
-  Download the PHP sources and binaries for the version of PHP you wish to use Extension Manager with. The downloads can be obtained from <http://www.php.net/downloads.php>. The sources are compressed in two formats .tar.gz and .tar.bz2. If you use WinZip, download the .tar.gz format. Winrar is capable of extracting .tar.bz2 formats.
+  Download the PHP sources and binaries for the version of PHP you wish to use Extension Manager with. The downloads can be obtained from <http://www.php.net/downloads.php>. The sources are compressed in two formats .tar.gz and .tar.bz2. If you use WinZip, download the .tar.gz format. WinRAR is capable of extracting .tar.bz2 formats.
 
 Note: The reason why you need the binary package is because it is not necessary to compile PHP sources; you only need the .lib file that is included in the binary distribution and PHP sources.
 
@@ -33,3 +33,8 @@ Debug PHP5 and Release PHP5 are used for PHP5. For our example, we will compile 
 7) Go to Build > Build manager.dll to build the manager extension.
 
 The .dll file will be created in sub-directories according to profile selection. Our example will place the compiled .dll file in c:\php\ext\manager\win32\Release
+
+------------
+* Windows is a registered trademark of Microsoft Corporation in the United States and other countries.
+* WinRAR is a registered trademark of win.rar GmbH.
+* WinZip is a Registered Trademark of WinZip International LLC
