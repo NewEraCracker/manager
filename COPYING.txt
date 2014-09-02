@@ -31,7 +31,7 @@ Third Party Legal Notices
 =========================
 
 This product is derived from software licensed under terms that require us to
-display the following notices.
+display the following notice:
 
 -------------------------------------------------------------------- 
                   The PHP License, version 3.01
