@@ -26,7 +26,7 @@ It is being used on Linux and Windows but other OS may be supported as well.
 Quick install
 -------------
 
-Note(1): for Microsoft Windows installation, please refer to README.win32 file.
+Note(1): for Microsoft Windows installation, please refer to README-win32.txt file.
 
 Step 1. Compiling Extension Manager
 
