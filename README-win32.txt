@@ -1,5 +1,6 @@
-Extension Manager on Windows
-============================
+====================================
+Extension Manager for PHP on Windows
+====================================
 
 Requirements
 ------------
