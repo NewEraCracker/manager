@@ -595,25 +595,23 @@ PHP_MINIT_FUNCTION(manager)
 	REGISTER_INI_ENTRIES();
 
 	{
-		/*
-		 * Module configuration
-		 * Strings have to be duplicated to avoid issues with strtok
-		 */
-		char * mod_dir  = estrdup(MANAGER_G(modules_dir));
-		char * mod_list = estrdup(MANAGER_G(modules_list));
+		/* Module configuration */
+		char * mod_dir  = MANAGER_G(modules_dir);
+		char * mod_list = MANAGER_G(modules_list);
 		int mod_dir_len = strlen(mod_dir);
 
 		if(mod_dir && mod_list && *mod_dir != '\0' && *mod_list != '\0')
 		{
-			/* Path to load */
-			char * libpath;
-
 			/* Tokenize modules list */
 			char * buf = NULL;
-			char * ptr = php_strtok_r(mod_list, ":", &buf);
+			char * lst = strdup(mod_list);
+			char * ptr = php_strtok_r(lst, ":", &buf);
 
 			while(ptr != NULL)
 			{
+				/* Path to load */
+				char * libpath = NULL;
+
 				if(IS_SLASH(mod_dir[mod_dir_len-1])) {
 					spprintf(&libpath, 0, "%s%s", mod_dir, ptr);
 				} else {
@@ -625,12 +623,14 @@ PHP_MINIT_FUNCTION(manager)
 
 				/* Advance to the next */
 				ptr = php_strtok_r(NULL, ":", &buf);
-			}
-		}
 
-		/* We can free the memory used by the duplicated strings */
-		efree(mod_dir);
-		efree(mod_list);
+				/* Free allocation made by spprintf */
+				efree(libpath);
+			}
+
+			/* We can free the memory used by the duplicated string */
+			free(lst);
+		}
 
 		return SUCCESS;
 	}
@@ -672,7 +672,7 @@ PHP_MINFO_FUNCTION(manager)
 	/* Box text */
 	PUTS("This server is enhanced by " MANAGER_AUTHOR "'s " MANAGER_NAME);
 	PUTS(!sapi_module.phpinfo_as_text?"<br /><br />":"\n");
-	PUTS("Copyright (c) 2014 " MANAGER_AUTHOR);	
+	PUTS("Copyright (c) 2014 " MANAGER_AUTHOR);
 
 	/* Box footer */
 	if(!sapi_module.phpinfo_as_text)
@@ -683,7 +683,7 @@ PHP_MINFO_FUNCTION(manager)
 	/* Information table */
 	php_info_print_table_start();
 	php_info_print_table_row(2, MANAGER_NAME " Support", "enabled");
-	php_info_print_table_row(2, MANAGER_NAME " Version", MANAGER_VERSION);	
+	php_info_print_table_row(2, MANAGER_NAME " Version", MANAGER_VERSION);
 	php_info_print_table_end();
 
 	DISPLAY_INI_ENTRIES();

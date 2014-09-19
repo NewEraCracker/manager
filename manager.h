@@ -87,7 +87,7 @@ extern zend_module_entry manager_module_entry;
 
 /** Define extension constants */
 #define MANAGER_NAME "Extension Manager"
-#define MANAGER_VERSION "1.0.3"
+#define MANAGER_VERSION "1.0.4"
 #define MANAGER_AUTHOR "NewEraCracker"
 
 /** Our globals */
