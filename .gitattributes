@@ -1,0 +1,4 @@
+*.dsp    eol=crlf
+*.sln    eol=crlf
+*.txt    eol=crlf
+*.vcproj eol=crlf
