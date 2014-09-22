@@ -83,5 +83,5 @@ manager.replace_info
 
 Contact us
 ----------
-You can contact us with questions, patches or bugs on GitHub
-<Insert URL here>
+You can contact us with questions, patches or bugs on Bitbucket:
+https://bitbucket.org/NewEraCracker/manager/issues
