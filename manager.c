@@ -28,6 +28,10 @@
  | copyright holders shall not be used in advertising or otherwise to  |
  | promote the sale, use or other dealings in this Software without    |
  | prior written authorization.                                        |
+ |                                                                     |
+ | Additionally, this product contains portions and is thereby derived |
+ | from software licensed under another license. Please consult        |
+ | COPYING.txt in this distribution for further information.           |
  +---------------------------------------------------------------------+
  | Author: NewEraCracker <neweracracker@gmail.com>                     |
  +---------------------------------------------------------------------+
