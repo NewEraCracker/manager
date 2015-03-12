@@ -1,5 +1,5 @@
 ARG_ENABLE("manager", "manager support", "no");
 
 if (PHP_MANAGER != "no") {
-	EXTENSION("manager", "manager.c list.c", true);
+	EXTENSION("manager", "manager.c", true);
 }

@@ -33,20 +33,17 @@
  +---------------------------------------------------------------------+
 */
 
-#include "list.h"
 #include "manager.h"
 #include "manager_logo.h"
 
-/** Declare our module globals */
+/** Our module globals */
 ZEND_DECLARE_MODULE_GLOBALS(manager)
-
-/** Linked list position */
-static zend_llist_position lp = NULL;
 
 /** Last zend_extension pointer */
 static zend_extension *ze = NULL;
 
-/** Original pointers to hooked zend extension methods */
+/** Pointers to hooked zend_extension original variables and methods */
+static char  *orig_author = NULL;
 static int  (*orig_startup)(zend_extension *extension) = NULL;
 static void (*orig_shutdown)(zend_extension *extension) = NULL;
 static void (*orig_activate)(void) = NULL;
@@ -59,11 +56,11 @@ static void (*orig_fcall_end_handler)(zend_op_array *op_array) = NULL;
 static void (*orig_op_array_ctor)(zend_op_array *op_array) = NULL;
 static void (*orig_op_array_dtor)(zend_op_array *op_array) = NULL;
 
-/** Zend extensions loaded by our manager and hooked into the 1st loaded zend extension */
-static Linkedlist * manager_extension_list;
+/** Zend extensions loaded by our manager and hooked into the last loaded zend_extension */
+static zend_llist * manager_extension_list = NULL;
 
 /** Hold the original value of zend extensions list */
-static zend_llist backup_zend_extensions;
+static zend_llist backup_zend_extensions = {0};
 
 /** You will never defeat the cracker of New Era... */
 #define BACKUP_ZEND_EXTENSIONS_LIST()   backup_zend_extensions = zend_extensions;
@@ -71,26 +68,23 @@ static zend_llist backup_zend_extensions;
 #define RESTORE_ZEND_EXTENSIONS_LIST()  zend_extensions = backup_zend_extensions;
 
 /** Stealth macro for functions with no arguments */
-#define STEALTH_FUNCTION_VOID(name)                 \
-  static void stealth_##name(void){                 \
-    Linkedlist     * list = manager_extension_list; \
-    Node           * itr  = list->head->next;       \
-    zend_llist     * zll  = NULL;                   \
-    zend_extension * ex   = NULL;                   \
-    if(orig_##name != NULL) {                       \
-      orig_##name();                                \
-    }                                               \
-    BACKUP_ZEND_EXTENSIONS_LIST()                   \
-    while(itr != list->tail) {                      \
-      zll = (zend_llist *)itr->element;             \
-      ex  = (zend_extension *)&zll->head->data;     \
-      REPLACE_ZEND_EXTENSIONS_LIST(*zll)            \
-      if(ex->##name != NULL) {                      \
-        ex->##name();                               \
-      }                                             \
-      itr = itr->next;                              \
-    }                                               \
-    RESTORE_ZEND_EXTENSIONS_LIST()                  \
+#define STEALTH_FUNCTION_VOID(name)                              \
+  static void stealth_##name(void){                              \
+    zend_llist_element * element = manager_extension_list->head; \
+    if(orig_##name != NULL) {                                    \
+      orig_##name();                                             \
+    }                                                            \
+    BACKUP_ZEND_EXTENSIONS_LIST()                                \
+    while(element) {                                             \
+      zend_llist     * zll = (zend_llist *)element->data;        \
+      zend_extension * ex  = (zend_extension *)&zll->head->data; \
+      REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
+      if(ex->##name != NULL) {                                   \
+        ex->##name();                                            \
+      }                                                          \
+      element = element->next;                                   \
+    }                                                            \
+    RESTORE_ZEND_EXTENSIONS_LIST()                               \
   }
 
 /** Stealth extension activation */
@@ -102,10 +96,8 @@ STEALTH_FUNCTION_VOID(deactivate)
 /** Stealth message_handler */
 static void stealth_message_handler(int message, void * arg)
 {
-	Linkedlist     * list = manager_extension_list;
-	Node           * itr  = list->head->next;
-	zend_llist     * zll  = NULL;
-	zend_extension * ex   = NULL;
+	/* First element to be iterated */
+	zend_llist_element * element = manager_extension_list->head;
 
 	/* Run message handler of the extension we hooked into */
 	if(orig_message_handler != NULL) {
@@ -115,11 +107,11 @@ static void stealth_message_handler(int message, void * arg)
 	BACKUP_ZEND_EXTENSIONS_LIST()
 
 	/* Handle our list of extensions */
-	while(itr != list->tail)
+	while(element)
 	{
 		/* Current extension being iterated */
-		zll = (zend_llist *)itr->element;
-		ex  = (zend_extension *)&zll->head->data;
+		zend_llist     * zll = (zend_llist *)element->data;
+		zend_extension * ex  = (zend_extension *)&zll->head->data;
 
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
@@ -128,33 +120,31 @@ static void stealth_message_handler(int message, void * arg)
 			ex->message_handler(message, arg);
 		}
 
-		itr = itr->next;
+		/* Advance iterator */
+		element = element->next;
 	}
 
 	RESTORE_ZEND_EXTENSIONS_LIST()
 }
 
 /** Stealth macro for functions with one arguments */
-#define STEALTH_FUNCTION_ARG1(name, type, arg)      \
-  static void stealth_##name(##type ##arg){         \
-    Linkedlist     * list = manager_extension_list; \
-    Node           * itr  = list->head->next;       \
-    zend_llist     * zll  = NULL;                   \
-    zend_extension * ex   = NULL;                   \
-    if(orig_##name != NULL) {                       \
-      orig_##name(##arg);                           \
-    }                                               \
-    BACKUP_ZEND_EXTENSIONS_LIST()                   \
-    while(itr != list->tail) {                      \
-      zll = (zend_llist *)itr->element;             \
-      ex  = (zend_extension *)&zll->head->data;     \
-      REPLACE_ZEND_EXTENSIONS_LIST(*zll)            \
-      if(ex->##name != NULL) {                      \
-        ex->##name(##arg);                          \
-      }                                             \
-      itr = itr->next;                              \
-    }                                               \
-    RESTORE_ZEND_EXTENSIONS_LIST()                  \
+#define STEALTH_FUNCTION_ARG1(name, type, arg)                   \
+  static void stealth_##name(##type ##arg){                      \
+    zend_llist_element * element = manager_extension_list->head; \
+    if(orig_##name != NULL) {                                    \
+      orig_##name(##arg);                                        \
+    }                                                            \
+    BACKUP_ZEND_EXTENSIONS_LIST()                                \
+    while(element) {                                             \
+      zend_llist     * zll = (zend_llist *)element->data;        \
+      zend_extension * ex  = (zend_extension *)&zll->head->data; \
+      REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
+      if(ex->##name != NULL) {                                   \
+        ex->##name(##arg);                                       \
+      }                                                          \
+      element = element->next;                                   \
+    }                                                            \
+    RESTORE_ZEND_EXTENSIONS_LIST()                               \
   }
 
 /** Stealth op_array_handler */
@@ -183,10 +173,8 @@ STEALTH_FUNCTION_ARG1(op_array_dtor, zend_op_array *, op_array)
 /** Stealth extension shutdown */
 static void stealth_shutdown(zend_extension *extension)
 {
-	Linkedlist     * list = manager_extension_list;
-	Node           * itr  = list->head->next;
-	zend_llist     * zll  = NULL;
-	zend_extension * ex   = NULL;
+	/* First element to be iterated */
+	zend_llist_element * element = manager_extension_list->head;
 
 	/* Run shutdown of the extension we hooked into */
 	if(orig_shutdown != NULL)
@@ -197,11 +185,11 @@ static void stealth_shutdown(zend_extension *extension)
 	BACKUP_ZEND_EXTENSIONS_LIST()
 
 	/* Handle our list of extensions */
-	while(itr != list->tail)
+	while(element)
 	{
 		/* Current extension being iterated */
-		zll = (zend_llist *)itr->element;
-		ex  = (zend_extension *)&zll->head->data;
+		zend_llist     * zll = (zend_llist *)element->data;
+		zend_extension * ex  = (zend_extension *)&zll->head->data;
 
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
@@ -218,12 +206,19 @@ static void stealth_shutdown(zend_extension *extension)
 		}
 
 		/* Advance iterator */
-		itr = itr->next;
+		element = element->next;
 	}
 
 	RESTORE_ZEND_EXTENSIONS_LIST()
 
+	/* Free extension author pointer if we allocated it. */
+	if(ze->author != orig_author)
+	{
+		free(ze->author);
+	}
+
 	/* Unhook everything */
+	RESTORE_ORIG_ZE(author)
 	RESTORE_ORIG_ZE(startup)
 	RESTORE_ORIG_ZE(shutdown)
 	RESTORE_ORIG_ZE(activate)
@@ -235,33 +230,23 @@ static void stealth_shutdown(zend_extension *extension)
 	RESTORE_ORIG_ZE(fcall_end_handler)
 	RESTORE_ORIG_ZE(op_array_ctor)
 	RESTORE_ORIG_ZE(op_array_dtor)
+	ze = NULL;
 
 	/* Destroy the list of extensions loaded by manager */
-	linkedlist_destroy(list);
-
-	/* Wipe addresses */
-	ze = NULL;
+	zend_llist_destroy(manager_extension_list);
+	free(manager_extension_list);
 	manager_extension_list = NULL;
 }
 
 /** Stealth extension startup */
 static int stealth_startup(zend_extension *extension)
 {
-	/* Have we initialized version info yet? */
-	static int initialized = 0;
-
 	/* Other stuff for hooking purposes */
 	int retval;
 	zend_module_entry *module_entry_ptr;
 
-	/* Pointers used for iteration of our extension list */
-	Linkedlist     * list = manager_extension_list;
-	Node           * itr  = list->head->next;
-	zend_llist     * zll  = NULL;
-	zend_extension * ex   = NULL;
-
-	/* Fetch thread information, we'll need this later */
-	TSRMLS_FETCH();
+	/* First element to be iterated */
+	zend_llist_element * element = manager_extension_list->head;
 
 	/* Set our module handle to null to avoid race conditions */
 	if(zend_hash_find(&module_registry, "manager", sizeof("manager"), (void **)&module_entry_ptr) == SUCCESS)
@@ -291,11 +276,11 @@ static int stealth_startup(zend_extension *extension)
 	BACKUP_ZEND_EXTENSIONS_LIST()
 
 	/* Handle our list of extensions */
-	while(itr != list->tail)
+	while(element)
 	{
 		/* Current extension being iterated */
-		zll = (zend_llist *)itr->element;
-		ex  = (zend_extension *)&zll->head->data;
+		zend_llist     * zll = (zend_llist *)element->data;
+		zend_extension * ex  = (zend_extension *)&zll->head->data;
 
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
@@ -305,125 +290,101 @@ static int stealth_startup(zend_extension *extension)
 			ex->startup(ex);
 		}
 
-		if(!initialized && MANAGER_G(replace_info))
-		{
-			/* To hold new information regarding loaded zend extensions */
-			char * new_info = NULL;
-			unsigned int new_info_length = 0;
-
-			/* Ugly but working hack */
-			new_info_length = sizeof("\n    with  v, , by ")
-							+ strlen(extension->author)
-							+ strlen(ex->name)
-							+ strlen(ex->version)
-							+ strlen(ex->copyright)
-							+ strlen(ex->author);
-
-			new_info = (char *) malloc(new_info_length+1);
-
-			/* Append */
-			sprintf(new_info, "%s\n    with %s v%s, %s, by %s", extension->author, ex->name, ex->version, ex->copyright, ex->author);
-
-			/* As we will replace this pointer, free the original */
-			free(extension->author);
-
-			/* Replace */
-			extension->author = new_info;
-		}
-
 		/* Advance iterator */
-		itr = itr->next;
+		element = element->next;
 	}
-
-	/* Save that we initialized */
-	initialized = 1;
 
 	RESTORE_ZEND_EXTENSIONS_LIST()
 
 	return retval;
 }
 
-/** Comparator for elements of linked list */
-static int manager_cmp(void * e1, void * e2)
-{
-	return strcmp((((zend_extension *)(((zend_llist *)e2)->head->data))->name), (((zend_extension *)(((zend_llist *)e1)->head->data))->name));
-}
-
-/** Print function for element of linked list */
-static void manager_print(void * e1)
-{
-	if(e1 == NULL)
-		return;
-
-	printf("%p -> %s", e1, (((zend_extension *)(((zend_llist *)e1)->head->data))->name));
-}
-
-/** Destroy element of linked list */
-static void manager_destroy(void * e1)
-{
-	if(e1 == NULL)
-		return;
-
-	/* Run destructor of element, in this case zend_llist destructor */
-	zend_llist_destroy((zend_llist *)e1);
-
-	/* As we malloc'ed the element, we will destroy that too */
-	free(e1);
-}
-
 /** Register a recently loaded zend extension */
-static int manager_register_zend_extension(zend_extension * new_extension, DL_HANDLE handle)
+static int manager_register_zend_extension(zend_extension * new_extension, DL_HANDLE handle TSRMLS_DC)
 {
-	zend_extension extension;
+	zend_extension ex;
 
-	extension = *new_extension;
-	extension.handle = handle;
-
-	/* Create a list that will store all zend extensions loaded by manager */
-	if(manager_extension_list == NULL)
-	{
-		manager_extension_list = linkedlist_create(&manager_cmp, &manager_print, &manager_destroy);
-	}
+	/* Save handle */
+	ex = *new_extension;
+	ex.handle = handle;
 
 	/* Load invisible to other Zend Extensions */
 	if(zend_llist_count(&zend_extensions) == 0)
 	{
-		/* Add extension to the zend engine list */
-		zend_llist_add_element(&zend_extensions, &extension);
+		/* Add extension to zend's list */
+		zend_llist_add_element(&zend_extensions, &ex);
 	}
 	else
 	{
-		/* Create a new Zend Linked List to store that extension entry */
-		zend_llist * extension_list = malloc(sizeof(zend_llist));
+		/* Prepare an extension for storage */
+		zend_llist emulated_extension_list;
+		zend_llist_init(&emulated_extension_list, sizeof(zend_extension), NULL, 1);
+		zend_llist_add_element(&emulated_extension_list, &ex);
 
-		/* Add extension entry to recently created list */
-		zend_llist_init(extension_list, sizeof(zend_extension), NULL, 1);
-		zend_llist_add_element(extension_list, &extension);
+		/* Create our list */
+		if(manager_extension_list == NULL)
+		{
+			manager_extension_list = malloc(sizeof(zend_llist));
+			zend_llist_init(manager_extension_list, sizeof(zend_llist), &zend_llist_destroy, 1);
+		}
 
-		/* Add the list we just created to our custom list */
-		linkedlist_addLast(manager_extension_list, (void *)extension_list);
-	}
+		/* Now store the extension in our list */
+		zend_llist_add_element(manager_extension_list, &emulated_extension_list);
 
-	if(ze == NULL)
-	{
-		/* Grab the last loaded zend extension */
-		ze = (zend_extension *)zend_llist_get_last_ex(&zend_extensions, &lp);
+		/* Hook ? */
+		if(ze == NULL)
+		{
+			/* Seek for a place to hook */
+			zend_llist_position lp = NULL;
+			ze = (zend_extension *)zend_llist_get_last_ex(&zend_extensions, &lp);
 
-		/* Save pointers to original zend extension methods */
-		SAVE_ORIG_ZE(startup)
-		SAVE_ORIG_ZE(shutdown)
-		SAVE_ORIG_ZE(activate)
-		SAVE_ORIG_ZE(deactivate)
-		SAVE_ORIG_ZE(message_handler)
-		SAVE_ORIG_ZE(op_array_handler)
-		SAVE_ORIG_ZE(statement_handler)
-		SAVE_ORIG_ZE(fcall_begin_handler)
-		SAVE_ORIG_ZE(fcall_end_handler)
-		SAVE_ORIG_ZE(op_array_ctor)
-		SAVE_ORIG_ZE(op_array_dtor)
+			/* Backup all original pointers */
+			SAVE_ORIG_ZE(author)
+			SAVE_ORIG_ZE(startup)
+			SAVE_ORIG_ZE(shutdown)
+			SAVE_ORIG_ZE(activate)
+			SAVE_ORIG_ZE(deactivate)
+			SAVE_ORIG_ZE(message_handler)
+			SAVE_ORIG_ZE(op_array_handler)
+			SAVE_ORIG_ZE(statement_handler)
+			SAVE_ORIG_ZE(fcall_begin_handler)
+			SAVE_ORIG_ZE(fcall_end_handler)
+			SAVE_ORIG_ZE(op_array_ctor)
+			SAVE_ORIG_ZE(op_array_dtor)
 
-		/* At this stage, hook startup */
-		HOOK_STEALTH_ZE(startup)
+			/* Hook startup stage */
+			HOOK_STEALTH_ZE(startup)
+		}
+
+		/* Replace information */
+		if(MANAGER_G(replace_info))
+		{
+			/* To hold new information regarding loaded zend extensions */
+			char * new_info = NULL;
+			unsigned int new_info_length = 0;
+
+			/* This is not an ugly hack. It is the way we do things */
+			new_info_length = sizeof("\n    with  v, , by ")
+							+ strlen(ze->author)
+							+ strlen(ex.name)
+							+ strlen(ex.version)
+							+ strlen(ex.copyright)
+							+ strlen(ex.author);
+
+			new_info = malloc(new_info_length+1);
+
+			/* Append */
+			snprintf(new_info, new_info_length+1, "%s\n    with %s v%s, %s, by %s", ze->author, ex.name, ex.version, ex.copyright, ex.author);
+
+			/* Free extension author pointer if we allocated it. */
+			if(ze->author != orig_author)
+			{
+				free(ze->author);
+			}
+
+			/* And now replace it */
+			ze->author = new_info;
+		}
 	}
 
 #if 0
@@ -554,7 +515,7 @@ static int manager_load_zend_extension(char *path TSRMLS_DC)
 	if(MANAGER_G(load_stealth))
 	{
 		/* In stealth mode register the extension in our manager */
-		return manager_register_zend_extension(new_extension, handle);
+		return manager_register_zend_extension(new_extension, handle TSRMLS_CC);
 	}
 
 	/* In normal mode register the extension in Zend engine manager */
@@ -576,11 +537,8 @@ PHP_INI_BEGIN()
 PHP_INI_END()
 
 /** Module Globals constructor */
-static void ZEND_MODULE_GLOBALS_CTOR_N(manager)(void *arg TSRMLS_DC)
+PHP_GINIT_FUNCTION(manager)
 {
-	zend_manager_globals *manager_globals = arg;
-
-	/* Initialize module globals */
 	manager_globals->modules_dir  = NULL;
 	manager_globals->modules_list = NULL;
 	manager_globals->check_build  = 1;
@@ -631,9 +589,9 @@ PHP_MINIT_FUNCTION(manager)
 			/* We can free the memory used by the duplicated string */
 			free(lst);
 		}
-
-		return SUCCESS;
 	}
+
+	return SUCCESS;
 }
 
 /** Module shutdown */
