@@ -2,7 +2,7 @@
  +---------------------------------------------------------------------+
  | Extension Manager for PHP                                           |
  +---------------------------------------------------------------------+
- | Copyright (c) 2014 NewEraCracker (http://www.planet-dl.org)         |
+ | Copyright (c) 2014-2015 NewEraCracker (http://www.planet-dl.org)    |
  +---------------------------------------------------------------------+
  | Permission is hereby granted, free of charge, to any person         |
  | obtaining a copy of this software and associated documentation      |
@@ -212,7 +212,7 @@ static void stealth_shutdown(zend_extension *extension)
 	RESTORE_ZEND_EXTENSIONS_LIST()
 
 	/* Free extension author pointer if we allocated it. */
-	if(ze->author != orig_author)
+	if(ze->author != NULL && ze->author != orig_author)
 	{
 		free(ze->author);
 	}
@@ -630,7 +630,7 @@ PHP_MINFO_FUNCTION(manager)
 	/* Box text */
 	PUTS("This server is enhanced by " MANAGER_AUTHOR "'s " MANAGER_NAME);
 	PUTS(!sapi_module.phpinfo_as_text?"<br /><br />":"\n");
-	PUTS("Copyright (c) 2014 " MANAGER_AUTHOR);
+	PUTS("Copyright (c) 2014-2015 " MANAGER_AUTHOR);
 
 	/* Box footer */
 	if(!sapi_module.phpinfo_as_text)
