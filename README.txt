@@ -1,4 +1,3 @@
-=========================
 Extension Manager for PHP
 =========================
 
@@ -17,12 +16,10 @@ methods from there if stealth mode is enabled.
 There are some advanced options for more skilled users, such as disabling build
 id checks and disabling info replacement.
 
-
 Compatibility
 -------------
 Extension Manager works with PHP version 5.2 and higher.
 It is being used on Linux and Windows but other OS may be supported as well.
-
 
 Quick install
 -------------
@@ -57,7 +54,6 @@ default values.
 
 If not, you need to edit your php.ini file (usually /etc/php.ini).
 
-
 Configuration Options
 ---------------------
 
@@ -80,8 +76,8 @@ manager.replace_info
 	Enable or disable information replacement (only applicable when stealth
 	loading is enabled)
 
-
 Contact us
 ----------
-You can contact us with questions, patches or bugs on Bitbucket:
+You can contact us with questions, patches or bugs on GitHub and BitBucket:
+https://github.com/NewEraCracker/manager/issues
 https://bitbucket.org/NewEraCracker/manager/issues
