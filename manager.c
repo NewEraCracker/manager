@@ -75,7 +75,7 @@ static zend_llist backup_zend_extensions = {0};
 #define STEALTH_FUNCTION_VOID(name)                              \
   static void stealth_##name(void){                              \
     zend_llist_element * element = manager_extension_list->head; \
-    if(orig_##name) {                                    \
+    if(orig_##name) {                                            \
       orig_##name();                                             \
     }                                                            \
     BACKUP_ZEND_EXTENSIONS_LIST()                                \
@@ -83,7 +83,7 @@ static zend_llist backup_zend_extensions = {0};
       zend_llist     * zll = (zend_llist *)element->data;        \
       zend_extension * ex  = (zend_extension *)&zll->head->data; \
       REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
-      if(ex->##name) {                                   \
+      if(ex->##name) {                                           \
         ex->##name();                                            \
       }                                                          \
       element = element->next;                                   \
@@ -135,7 +135,7 @@ static void stealth_message_handler(int message, void * arg)
 #define STEALTH_FUNCTION_ARG1(name, type, arg)                   \
   static void stealth_##name(##type ##arg){                      \
     zend_llist_element * element = manager_extension_list->head; \
-    if(orig_##name) {                                    \
+    if(orig_##name) {                                            \
       orig_##name(##arg);                                        \
     }                                                            \
     BACKUP_ZEND_EXTENSIONS_LIST()                                \
@@ -143,7 +143,7 @@ static void stealth_message_handler(int message, void * arg)
       zend_llist     * zll = (zend_llist *)element->data;        \
       zend_extension * ex  = (zend_extension *)&zll->head->data; \
       REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
-      if(ex->##name) {                                   \
+      if(ex->##name) {                                           \
         ex->##name(##arg);                                       \
       }                                                          \
       element = element->next;                                   \
