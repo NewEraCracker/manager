@@ -58,11 +58,11 @@ Configuration Options
 ---------------------
 
 manager.modules_dir
-	The directory where the loadable zend extensions reside
+	Directory where the loadable zend extensions reside
 	Default: Empty
 
 manager.modules_list
-	The list of zend extensions to be loaded
+	List of zend extensions to be loaded separated by colons
 	Default: Empty
 
 manager.check_build
