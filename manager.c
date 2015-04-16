@@ -75,7 +75,7 @@ static zend_llist backup_zend_extensions = {0};
 #define STEALTH_FUNCTION_VOID(name)                              \
   static void stealth_##name(void){                              \
     zend_llist_element * element = manager_extension_list->head; \
-    if(orig_##name != NULL) {                                    \
+    if(orig_##name) {                                    \
       orig_##name();                                             \
     }                                                            \
     BACKUP_ZEND_EXTENSIONS_LIST()                                \
@@ -83,7 +83,7 @@ static zend_llist backup_zend_extensions = {0};
       zend_llist     * zll = (zend_llist *)element->data;        \
       zend_extension * ex  = (zend_extension *)&zll->head->data; \
       REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
-      if(ex->##name != NULL) {                                   \
+      if(ex->##name) {                                   \
         ex->##name();                                            \
       }                                                          \
       element = element->next;                                   \
@@ -104,7 +104,7 @@ static void stealth_message_handler(int message, void * arg)
 	zend_llist_element * element = manager_extension_list->head;
 
 	/* Run message handler of the extension we hooked into */
-	if(orig_message_handler != NULL) {
+	if(orig_message_handler) {
 		orig_message_handler(message, arg);
 	}
 
@@ -119,7 +119,7 @@ static void stealth_message_handler(int message, void * arg)
 
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
-		if(ex->message_handler != NULL)
+		if(ex->message_handler)
 		{
 			ex->message_handler(message, arg);
 		}
@@ -135,7 +135,7 @@ static void stealth_message_handler(int message, void * arg)
 #define STEALTH_FUNCTION_ARG1(name, type, arg)                   \
   static void stealth_##name(##type ##arg){                      \
     zend_llist_element * element = manager_extension_list->head; \
-    if(orig_##name != NULL) {                                    \
+    if(orig_##name) {                                    \
       orig_##name(##arg);                                        \
     }                                                            \
     BACKUP_ZEND_EXTENSIONS_LIST()                                \
@@ -143,7 +143,7 @@ static void stealth_message_handler(int message, void * arg)
       zend_llist     * zll = (zend_llist *)element->data;        \
       zend_extension * ex  = (zend_extension *)&zll->head->data; \
       REPLACE_ZEND_EXTENSIONS_LIST(*zll)                         \
-      if(ex->##name != NULL) {                                   \
+      if(ex->##name) {                                   \
         ex->##name(##arg);                                       \
       }                                                          \
       element = element->next;                                   \
@@ -181,7 +181,7 @@ static void stealth_shutdown(zend_extension *extension)
 	zend_llist_element * element = manager_extension_list->head;
 
 	/* Run shutdown of the extension we hooked into */
-	if(orig_shutdown != NULL)
+	if(orig_shutdown)
 	{
 		orig_shutdown(extension);
 	}
@@ -198,7 +198,7 @@ static void stealth_shutdown(zend_extension *extension)
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
 		/* Shutdown extension */
-		if(ex->shutdown != NULL)
+		if(ex->shutdown)
 		{
 			ex->shutdown(ex);
 		}
@@ -216,7 +216,7 @@ static void stealth_shutdown(zend_extension *extension)
 	RESTORE_ZEND_EXTENSIONS_LIST()
 
 	/* Free extension author pointer if we allocated it. */
-	if(ze->author != NULL && ze->author != orig_author)
+	if(ze->author && ze->author != orig_author)
 	{
 		free(ze->author);
 	}
@@ -275,7 +275,7 @@ static int stealth_startup(zend_extension *extension)
 	HOOK_STEALTH_ZE(op_array_dtor)
 
 	/* Run startup of the extension we hooked into */
-	retval = (orig_startup == NULL) ? SUCCESS : orig_startup(extension);
+	retval = (orig_startup) ? orig_startup(extension) : SUCCESS;
 
 	BACKUP_ZEND_EXTENSIONS_LIST()
 
@@ -289,7 +289,7 @@ static int stealth_startup(zend_extension *extension)
 		REPLACE_ZEND_EXTENSIONS_LIST(*zll)
 
 		/* Startup the extension */
-		if(ex->startup != NULL)
+		if(ex->startup)
 		{
 			ex->startup(ex);
 		}
@@ -326,7 +326,7 @@ static int manager_register_zend_extension(zend_extension * new_extension, DL_HA
 		zend_llist_add_element(&emulated_extension_list, &ex);
 
 		/* Create our list */
-		if(manager_extension_list == NULL)
+		if(!manager_extension_list)
 		{
 			manager_extension_list = malloc(sizeof(zend_llist));
 			zend_llist_init(manager_extension_list, sizeof(zend_llist), &zend_llist_destroy, 1);
@@ -336,7 +336,7 @@ static int manager_register_zend_extension(zend_extension * new_extension, DL_HA
 		zend_llist_add_element(manager_extension_list, &emulated_extension_list);
 
 		/* Hook ? */
-		if(ze == NULL)
+		if(!ze)
 		{
 			/* Seek for a place to hook */
 			zend_llist_position lp = NULL;
@@ -569,25 +569,28 @@ PHP_MINIT_FUNCTION(manager)
 			char * lst = strdup(mod_list);
 			char * ptr = php_strtok_r(lst, ":", &buf);
 
-			while(ptr != NULL)
+			while(ptr)
 			{
-				/* Path to load */
-				char * libpath = NULL;
+				if(*ptr != '\0')
+				{
+					/* Path to load */
+					char * libpath = NULL;
 
-				if(IS_SLASH(mod_dir[mod_dir_len-1])) {
-					spprintf(&libpath, 0, "%s%s", mod_dir, ptr);
-				} else {
-					spprintf(&libpath, 0, "%s%c%s", mod_dir, DEFAULT_SLASH, ptr);
+					if(IS_SLASH(mod_dir[mod_dir_len-1])) {
+						spprintf(&libpath, 0, "%s%s", mod_dir, ptr);
+					} else {
+						spprintf(&libpath, 0, "%s%c%s", mod_dir, DEFAULT_SLASH, ptr);
+					}
+
+					/* Load extension */
+					manager_load_zend_extension(libpath TSRMLS_CC);
+
+					/* Free allocation made by spprintf */
+					efree(libpath);
 				}
-
-				/* Load extension */
-				manager_load_zend_extension(libpath TSRMLS_CC);
 
 				/* Advance to the next */
 				ptr = php_strtok_r(NULL, ":", &buf);
-
-				/* Free allocation made by spprintf */
-				efree(libpath);
 			}
 
 			/* We can free the memory used by the duplicated string */

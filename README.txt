@@ -59,22 +59,26 @@ Configuration Options
 
 manager.modules_dir
 	The directory where the loadable zend extensions reside
+	Default: Empty
 
 manager.modules_list
 	The list of zend extensions to be loaded
+	Default: Empty
 
 manager.check_build
-	Default: 1 (Enabled)
-	Enable or disable build id check (only in PHP 5.3 and higher)
+	Enable build id check
+	Only applicable in PHP 5.3 and higher
+	Keep it turned on unless you really know what you are doing
+	Default: 1 (Turned on)
 
 manager.load_stealth
-	Default: 0 (Disabled)
-	Disable or enable stealth loading
+	Enable stealth loading
+	Default: 0 (Turned off)
 
 manager.replace_info
-	Default: 1 (Enabled)
-	Enable or disable information replacement (only applicable when stealth
-	loading is enabled)
+	Enable information replacement
+	Only applicable when stealth loading is enabled
+	Default: 1 (Turned on)
 
 Contact us
 ----------
